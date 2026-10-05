@@ -1,13 +1,31 @@
+# Copyright 2025 Automate the Cloud Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 locals {
-  database_master_password = try(var.credentials.master.password, null) != null ? var.credentials.master.password : random_password.master_password.result
+  # A global database secondary takes its databases and master user from the primary.
+  secondary = try(var.global_cluster.secondary, false)
 
-  kms_key_id = try(var.encryption.enabled, true) ? try(var.encryption.kms_key_id, "alias/aws/rds") : null
-  port       = try(var.port, null) != null ? var.port : local.port_default_lookup["${var.db_type}"]
+  port = coalesce(var.port, var.engine == "aurora-postgresql" ? 5432 : 3306)
 
-  port_default_lookup = {
-    mysql      = "3306"
-    postgresql = "5432"
+  master_username = coalesce(var.master_username, var.engine == "aurora-postgresql" ? "postgres" : "admin")
+
+  # Without a password of the caller's own, RDS keeps one in Secrets Manager. Decided from
+  # whether the input is null, so a password created in the same run still plans. Whether
+  # a password was given is not secret; without nonsensitive(), the sensitive mark of
+  # master_password would make the whole metadata output sensitive.
+  manage_master_user_password = !local.secondary && nonsensitive(var.master_password == null)
+
+  # The scaling policies, keyed by a fixed name, from the inputs alone.
+  autoscaling_policies = var.autoscaling == null ? {} : {
+    for k, v in {
+      cpu = {
+        metric = "RDSReaderAverageCPUUtilization"
+        target = var.autoscaling.target_cpu_utilization
+      }
+      connections = {
+        metric = "RDSReaderAverageDatabaseConnections"
+        target = var.autoscaling.target_connections
+      }
+    } : k => v if v.target != null
   }
-
-  ignore_admin_credentials = var.replication_source_identifier != null || try(var.global_cluster.secondary, false) ? true : false
 }
