@@ -4,6 +4,17 @@ All notable changes to this module are listed here. The format follows [Keep a C
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-06
+
+### Fixed
+
+- The final snapshot's name now changes whenever the cluster is replaced, not only when it is renamed. A replacement, such as a new `db_subnet_group_name`, kept the name, so the replaced cluster's final snapshot took it, and deleting the new cluster would then fail because a snapshot with that name exists. Upgrading from 1.0.0 gives an existing cluster a new final snapshot name once, as an in-place change.
+
+### Changed
+
+- The copyright year in `NOTICE` and the file headers is now 2026, the year the module was rebuilt and released as 1.0.0.
+- `CLAUDE.md`, the working rules shared by every Automate the Cloud module, adds the lessons learned while rebuilding the modules.
+
 ## [1.0.0] - 2026-10-05
 
 Initial release.
@@ -22,5 +33,6 @@ Initial release.
 - A `metadata` output with everything the module created.
 - Offline tests, and examples for a basic cluster and most options together.
 
-[Unreleased]: https://github.com/AutomateTheCloud/terraform-aws-rds_aurora/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/AutomateTheCloud/terraform-aws-rds_aurora/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/AutomateTheCloud/terraform-aws-rds_aurora/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/AutomateTheCloud/terraform-aws-rds_aurora/releases/tag/v1.0.0

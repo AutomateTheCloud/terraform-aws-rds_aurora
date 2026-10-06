@@ -1,4 +1,4 @@
-# Copyright 2025 Automate the Cloud Inc.
+# Copyright 2026 Automate the Cloud Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 # Bugs found in the module before 1.0.0, each with the input that showed it.
@@ -172,5 +172,29 @@ run "instances_take_version_from_cluster" {
   assert {
     condition     = aws_rds_cluster.this.engine_version == "16.4"
     error_message = "Expected the cluster's version."
+  }
+}
+
+# The final snapshot's suffix changed only with the name, so a change that replaces the
+# cluster, such as db_subnet_group_name, kept it: the replaced cluster's final snapshot
+# took the name, and deleting the new cluster would fail on it.
+run "final_snapshot_suffix_follows_replacing_inputs" {
+  command = plan
+  variables {
+    kms_key_id = "arn:aws:kms:us-east-1:111111111111:key/0000"
+  }
+  assert {
+    condition = alltrue([
+      random_id.final_snapshot.keepers["name"] == "orders",
+      random_id.final_snapshot.keepers["engine"] == "aurora-postgresql",
+      random_id.final_snapshot.keepers["db_subnet_group_name"] == "private",
+      random_id.final_snapshot.keepers["kms_key_id"] == "arn:aws:kms:us-east-1:111111111111:key/0000",
+    ])
+    error_message = "Every input that replaces the cluster must change the final snapshot's suffix."
+  }
+  # Inputs that ignore_changes keeps from replacing the cluster must not change it.
+  assert {
+    condition     = length(setintersection(keys(random_id.final_snapshot.keepers), ["database_name", "master_username", "snapshot_identifier"])) == 0
+    error_message = "Inputs that do not replace the cluster must not change the final snapshot's suffix."
   }
 }
